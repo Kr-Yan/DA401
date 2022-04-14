@@ -1,0 +1,238 @@
+---
+title: "NHIS_ANALYSIS"
+output: html_document
+date: '2022-03-21'
+Author: 'Kairuo Yan'
+---
+```{r setup, include=FALSE}
+# load libraries of packages
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(factoextra)
+
+
+```
+
+```{r}
+#read files into dataset
+health_d <- read.csv(file="adult20.csv")
+```
+
+
+```{r}
+#partition a test file for pca exam. Keep the colummn with no more than 10% NA
+tested=health_d[, which(colMeans(!is.na(health_d)) > 0.9)]
+```
+
+```{r}
+#Conduct pca exam and selected features with high evigenvalues
+pca = prcomp(na.omit(tested), center = TRUE, scale = FALSE)
+#summary(pca)
+pcat = as.data.frame(-pca$x[,6:8])
+```
+
+
+
+```{r}
+#etermine the value of k using the elbow method->gap stat chart
+fviz_nbclust(pcat, kmeans, method = 'gap_stat')
+```
+
+
+```{r}
+#Apply k-means to cluster the data
+k = 2
+kmeans = kmeans(pcat, centers = k, nstart = 50)
+fviz_cluster(kmeans, data = pcat)
+
+```
+
+#Anxiety ANOVA Tests
+1. anxiety frequency and age, race and marital stage
+```{r}
+AX_1 <- aov(ANXFREQ_A ~ AGEP_A+ORIENT_A+RACEALLP_A+SEX_A+MARITAL_A+LEGMSTAT_A, data = health_d)
+
+summary(AX_1)
+
+```
+
+2.anxiety frequency and income and poverty
+```{r}
+AX_2 <- aov(ANXFREQ_A ~ INCWRKO_A+ INCSSRR_A+EDUC_A+FAMINCTC_A + POVRATTC_A+INCGRP_A+URBRRL+REGION, data = health_d)
+
+summary(AX_2)
+```
+
+3.anxiety frequency and smoke habits
+```{r}
+AX_3 <- aov(ANXFREQ_A ~ SMKAGE_A+CIGNOW_A+ECIGNOW_A+SMKECIGST_A+CIGARCUR_A, data = health_d)
+
+summary(AX_3)
+
+```
+
+4. anxiety frequency and sleep, support and working distance
+```{r}
+AX_4 <- aov(ANXFREQ_A ~ ASEV_A+CANEV_A+EMPWKHRS2_A+SLPHOURS_A+SLPFLL_A+SUPPORT_A+WRKCLSSD_A+CLSWRKSD_A, data = health_d)
+
+summary(AX_4)
+
+
+```
+5. anxiety frequency and drinking habits
+```{r}
+AX_5 <- aov(ANXFREQ_A ~ DRKLIFE_A+DRK12MN_A+DRK12MN1_A+DRK12MTP_A+DRK12MTP1_A+DRK12MWK_A+DRK12MYR_A+DRKAVG12M_A+DRKAVG12M1_A+DRKSTAT_A, data = health_d)
+
+summary(AX_5)
+
+```
+
+
+#Depression ANOVA Tests
+1. depression frequency and age, race and marital stage
+```{r}
+DP_1 <- aov(DEPFREQ_A ~ AGEP_A+ORIENT_A+RACEALLP_A+SEX_A+MARITAL_A+LEGMSTAT_A, data = health_d)
+
+summary(DP_1)
+
+```
+
+2.depression frequency and income and poverty
+```{r}
+DP_2 <- aov(DEPFREQ_A ~ INCWRKO_A+ INCSSRR_A+EDUC_A+FAMINCTC_A + POVRATTC_A+INCGRP_A+URBRRL+REGION, data = health_d)
+
+summary(DP_2)
+```
+
+3.depression frequency and smoke habits
+```{r}
+AX_3 <- aov(DEPFREQ_A ~ SMKAGE_A+SMKNOW_A+CIGNOW_A+ECIGNOW_A+SMKECIGST_A+CIGARCUR_A, data = health_d)
+
+summary(AX_3)
+
+```
+
+4. depression frequency and sleep, support and working distance
+```{r}
+AX_4 <- aov(DEPFREQ_A ~ ASEV_A+CANEV_A+EMPWKHRS2_A+SLPHOURS_A+SLPFLL_A+SUPPORT_A+WRKCLSSD_A+CLSWRKSD_A, data = health_d)
+
+summary(AX_4)
+
+
+```
+5. depression frequency and drinking habits
+```{r}
+AX_5 <- aov(DEPFREQ_A ~ DRKLIFE_A+DRK12MN_A+DRK12MN1_A+DRK12MTP_A+DRK12MTP1_A+DRK12MWK_A+DRK12MYR_A+DRKAVG12M_A+DRKAVG12M1_A+DRKSTAT_A, data = health_d)
+
+summary(AX_5)
+
+```
+
+
+
+# Scatterplot for Anxiety vs. Drinking Status
+```{r}
+he=subset(health_d, health_d$DRKSTAT_A != 10) # delete the answers that are unsure(which is irrelevant to our hypothesis)
+h=subset(he, he$DRKSTAT_A != 9) # delete the answers that are unsure(which is irrelevant to our hypothesis)
+x <- h$DRKSTAT_A # set x values
+y <- h$ANXFREQ_A #set y values
+
+
+
+par(font.axis=1, cex.axis=0.6) 
+plot(x, y,xaxt="n",yaxt = "n",main = "Anxiety vs. Drinking Status",
+     xlab = "Drinking Status", ylab = "Anxiety frequency", col= "olivedrab3", frame = FALSE)       # plot the sctterplot
+
+box(bty = "l")
+axis(2, at = 1:5, labels=c("Daily","Weekly","Monthly","A few\ntimes\na year","Never"),las=1)    # label the y-ticks on y-axis
+
+xi=c("Lifetime\nabstainer","Former\ninfrequent","Former\nregular","Former,\n unknown frequency","Current\ninfrequent","Current\nlight", "Current\nmoderate","Current\nheavier","Current\ndrinkerlevel\nunknown","Drinking \nstatus\nunknown")    # label the x-ticks on x-axis
+axis(1, at = 1:10, labels=xi,las=1)
+
+abline(lm(y ~ x, data = health_d), col = "orange",lwd=3, lty=2) # add a trend line
+
+
+```
+
+
+# Scatterplot for Depression vs. Drinking Status
+```{r}
+he=subset(health_d, health_d$DRKSTAT_A != 10) # delete the answers that are unsure(which is irrelevant to our hypothesis)
+h=subset(he, he$DRKSTAT_A != 9) # delete the answers that are unsure(which is irrelevant to our hypothesis)
+x <- h$DRKSTAT_A  #set x values
+y <- h$DEPFREQ_A  #set y values
+
+
+
+par(font.axis=1, cex.axis=0.6)
+plot(x, y,xaxt="n",yaxt = "n",main = "Depression vs. Drinking Status",
+     xlab = "Drinking Status", ylab = "Depression frequency", col= "olivedrab3", frame = FALSE)   #plot scatterplot
+
+box(bty = "l")
+axis(2, at = 1:5, labels=c("Daily","Weekly","Monthly","A few\ntimes\na year","Never"),las=1)    # label the y-ticks on y-axis
+
+xi=c("Lifetime\nabstainer","Former\ninfrequent","Former\nregular","Former,\n unknown frequency","Current\ninfrequent","Current\nlight", "Current\nmoderate","Current\nheavier","Current\ndrinkerlevel\nunknown","Drinking \nstatus\nunknown")      # label the x-ticks on x-axis
+axis(1, at = 1:10, labels=xi,las=1)
+
+abline(lm(y ~ x, data = health_d), col = "orange",lwd=3, lty=2)  # add a trend line
+
+
+```
+
+
+
+#Scatterplot for Anxiety vs. Poverty Ratio
+```{r}
+#set x, y values
+x <- health_d$POVRATTC_A
+y <- health_d$ANXFREQ_A
+
+
+par(font.axis=1, cex.axis=0.6)
+
+#plot scatterplot
+plot(x, y,yaxt = "n",main = "Anxiety vs. Poverty Ratio",
+     xlab = "Poverty ratio (ratio of the family’s income to the appropriate Federal
+poverty threshold)", ylab = "Anxiety frequency", col= "wheat", frame = FALSE)
+
+box(bty = "l")
+axis(2, at = 1:5, labels=c("Daily","Weekly","Monthly","A few\ntimes\na year","Never"),las=1)  #set x-ticks for x-axis
+
+
+# add a trend line
+abline(lm(y ~ x, data = health_d), col = "plum3",lwd=3, lty=2)
+
+```
+
+
+#Scatterplot for Depression vs. Poverty Ratio
+```{r}
+
+#set x, y values
+x <- health_d$POVRATTC_A
+y <- health_d$DEPFREQ_A
+
+
+par(font.axis=1, cex.axis=0.6)
+
+
+#plot scatterplot
+plot(x, y,yaxt = "n",main = "Depression vs. Poverty Ratio",
+     xlab = "Poverty ratio (ratio of the family’s income to the appropriate Federal
+poverty threshold)", ylab = "Depression frequency", col= "wheat", frame = FALSE)
+
+box(bty = "l")
+axis(2, at = 1:5, labels=c("Daily","Weekly","Monthly","A few\ntimes\na year","Never"),las=1) #set x-ticks for x-axis
+
+
+# add a trend line
+abline(lm(y ~ x, data = health_d), col = "plum3",lwd=3, lty=2)
+
+```
+
+
+
+
+
